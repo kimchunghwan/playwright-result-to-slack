@@ -63,15 +63,15 @@ test.describe("finviz symbols", () => {
   }
 });
 
-test.describe("CNN Fear and Greed", () => {
-  test("CNN Fear and Greed", async ({ page }) => {
-    page
-      .goto("https://edition.cnn.com/markets/fear-and-greed")
-      .catch((e: any) => {});
-    await page.waitForTimeout(2000);
-    await page
-      .locator(".market-tabbed-container")
-      .screenshot({ path: `./${testResultPath}/fear-and-greed.png` })
-      .catch((e: any) => {});
-  });
-});
+// test.describe("CNN Fear and Greed", () => {
+//   test("CNN Fear and Greed", async ({ page }) => {
+//     page
+//       .goto("https://edition.cnn.com/markets/fear-and-greed")
+//       .catch((e: any) => {});
+//     await page.waitForTimeout(2000);
+//     await page
+//       .locator(".market-tabbed-container")
+//       .screenshot({ path: `./${testResultPath}/fear-and-greed.png` })
+//       .catch((e: any) => {});
+//   });
+// });
