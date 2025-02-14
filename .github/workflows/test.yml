@@ -24,7 +24,15 @@ jobs:
         node-version: '20.x'
         cache: 'npm'
 
-    - name: npm install, build, and test
+    - name: Cache Playwright
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - name: npm install, build
       timeout-minutes: 5
       run: |
         npm ci
