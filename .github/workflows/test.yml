@@ -1,13 +1,12 @@
-
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:  
+    branches: ["main"]
+  workflow_dispatch:
   schedule:
-    - cron:  '0 22 * * 1-5'
+    - cron: "0 22 * * 1-5"
 
 env:
-  NODE_VERSION: '20.x'                # set this to the node version to use
+  NODE_VERSION: "20.x" # set this to the node version to use
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 permissions:
   contents: read
@@ -16,26 +15,37 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20.x'
-        cache: 'npm'
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.x"
+          cache: "npm"
 
-    - name: npm install, build, and test
-      timeout-minutes: 5
-      run: |
-        npm ci
-        npx playwright install chromium
-        npm run test --if-present
+      - name: Cache Playwright binaries
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
-    - name: Archive code coverage results
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: test-results
+      - name: Install dependencies and Playwright
+        run: |
+          npm ci
+          npx playwright install chromium
 
-    - name: upload to slack 
-      run: npm run upload:files
+      - name: npm install, build, and test
+        timeout-minutes: 5
+        run: |
+          npm run test --if-present
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+
+      - name: upload to slack
+        run: npm run upload:files
