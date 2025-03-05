@@ -57,7 +57,7 @@ test.describe("finviz symbols", () => {
         page,
         finvizURL(symbol),
         `./${testResultPath}/finviz-${symbol}.png`,
-        ".ticker-wrapper"
+        "#chart"
       );
     });
   }
