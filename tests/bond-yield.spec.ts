@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { testResultPath } from "./stock.spec";
 
+const testResultPath = "test-results";
 test('test', async ({ page }) => {
   await page.goto('https://ko.tradingeconomics.com/united-states/government-bond-yield');
   await page.getByText('5Y', { exact: true }).click();

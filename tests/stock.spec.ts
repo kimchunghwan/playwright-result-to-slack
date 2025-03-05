@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { FINVIZ_SYMBOLS, finvizURL, GROWTH_SYMBOLS } from "../define";
 
-export const testResultPath = "test-results";
+const testResultPath = "test-results";
 test("kospi, kosdaq", async ({ page }) => {
   await page.goto("https://finance.naver.com/sise/sise_index.naver?code=KOSPI");
   await page.getByText("월", { exact: true }).click();
