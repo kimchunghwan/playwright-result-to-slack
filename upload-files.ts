@@ -55,6 +55,9 @@ const getUrlFromFilename = (filename: string) => {
       return finvizURL(symbol);
     }
   }
+  if (filename === 'US_10Y.png') {
+    return 'https://ko.tradingeconomics.com/united-states/government-bond-yield';
+  }
 };
 
 uploadFile();
