@@ -1,0 +1,12 @@
+name: Check line messaging API limit
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run my action
+        run: sh test.sh
