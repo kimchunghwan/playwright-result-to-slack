@@ -39,24 +39,6 @@ jobs:
         env:
           CI: true
 
-      # - name: Cache Playwright binaries
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.cache/ms-playwright
-      #     key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-playwright-
-
-      # - name: Install dependencies and Playwright
-      #   run: |
-      #     npm ci
-      #     npx playwright install chromium
-
-      # - name: npm install, build, and test
-      #   timeout-minutes: 5
-      #   run: |
-      #     npm run test --if-present
-
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: failure()
