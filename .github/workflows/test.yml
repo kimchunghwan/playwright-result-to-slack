@@ -8,7 +8,6 @@ on:
     - cron: "0 22 * * 1-5"
 
 env:
-  NODE_VERSION: "20.x" # set this to the node version to use
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 permissions:
   contents: read
@@ -16,38 +15,35 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+        browser: [chromium]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "20.x"
+          node-version: ${{ matrix.node-version }}
           cache: "npm"
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Cache Playwright binaries
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
+      - name: Install Playwright
+        run: npx playwright install ${{ matrix.browser }} --with-deps
 
-      - name: Install dependencies and Playwright
-        run: |
-          npm ci
-          npx playwright install chromium
+      - name: Run tests
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          CI: true
 
-      - name: npm install, build, and test
-        timeout-minutes: 5
-        run: |
-          npm run test --if-present
-
-      - name: Archive code coverage results
+      - name: Upload test results
         uses: actions/upload-artifact@v4
+        if: failure()
         with:
-          name: test-results
-          path: test-results
+          name: test-results-${{ matrix.browser }}-${{ matrix.node-version }}
+          path: test-results/
 
       - name: upload to slack
         run: npm run upload:files
