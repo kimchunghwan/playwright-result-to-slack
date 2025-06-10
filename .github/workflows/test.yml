@@ -8,7 +8,6 @@ on:
     - cron: "0 22 * * 1-5"
 
 env:
-  NODE_VERSION: "20.x" # set this to the node version to use
   SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 permissions:
   contents: read
@@ -18,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: [20]
         browser: [chromium]
     steps:
       - uses: actions/checkout@v4
