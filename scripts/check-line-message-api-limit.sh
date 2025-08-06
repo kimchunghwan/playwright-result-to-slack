@@ -2,7 +2,7 @@
 
 LINE_ACCESS_TOKEN="${LINE_ACCESS_TOKEN:-}"
 SLACK_BOT_TOKEN="${SLACK_BOT_TOKEN:-}"
-NOTIFICATION_PERCENTAGE=80 # Notification threshold percentage
+NOTIFICATION_PERCENTAGE=3 # Notification threshold percentage
 SLACK_CHANNEL_ID="C057FBXAGF4" # todo check alert channel
 
 if [ -z "$LINE_ACCESS_TOKEN" ]; then
