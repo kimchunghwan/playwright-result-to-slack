@@ -1,63 +1,136 @@
 import { WebClient, LogLevel } from "@slack/web-api";
 import fs from "fs";
-import { FINVIZ_SYMBOLS, finvizURL } from "./define";
-// WebClient instantiates a client that can call API methods
-// When using Bolt, you can use either `app.client` or the `client` passed to listeners.
+import path from "path";
+import { FINVIZ_SYMBOLS, finvizURL, TEST_RESULT_PATH, SLACK_CHANNEL_ID, UTC_OFFSET_HOURS, URLS } from "./define";
+
+/**
+ * Initialize Slack WebClient with proper error handling and appropriate log level
+ */
 const client = new WebClient(process.env.SLACK_BOT_TOKEN, {
-  // LogLevel can be imported and used to make debugging simpler
-  logLevel: LogLevel.DEBUG,
+  logLevel: process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG,
+  retryConfig: {
+    retries: 3,
+    factor: 2,
+    minTimeout: 1000,
+    maxTimeout: 5000,
+  }
 });
 
-const UTC_9 = 9 * 60 * 60 * 1000;
-
-// The name of the file you're going to upload
-const folder = "./test-results/";
-// ID of channel that #stock
-const channelId = "C032JKDP3TJ";
-
-const uploadFile = async () => {
-  try {
-    const chatResult = await client.chat.postMessage({
-      channel: channelId,
-      text: new Date(new Date().getTime() + UTC_9).toISOString(),
-    });
-    const thread_ts = chatResult.ts;
-    const files = await getfiles(folder);
-    const result = await Promise.all(
-      files.map(async (fileName) => {
-        const url = getUrlFromFilename(fileName);
-        const result = await client.files.uploadV2({
-          // channels can be a list of one to many strings
-          channels: channelId,
-          initial_comment: `${fileName} :smile: ${url}`,
-          file: folder + fileName,
-          filename: fileName,
-          thread_ts,
-        });
-        console.log(result);
-      })
-    );
-  } catch (error) {
-    console.error(error);
-  }
+/**
+ * Get Korean Standard Time formatted timestamp
+ */
+const getKSTTimestamp = (): string => {
+  const now = new Date();
+  const kstTime = new Date(now.getTime() + (UTC_OFFSET_HOURS * 60 * 60 * 1000));
+  return kstTime.toISOString();
 };
 
-const getfiles = async (folder: string) => {
-  // get files list in  test-results folder
-
-  const files: string[] = fs.readdirSync(folder);
-  return files;
-};
-
-const getUrlFromFilename = (filename: string) => {
-  for (let symbol of FINVIZ_SYMBOLS) {
+/**
+ * Get URL source for a given filename
+ */
+const getUrlFromFilename = (filename: string): string | undefined => {
+  // Handle Finviz stock symbols
+  for (const symbol of FINVIZ_SYMBOLS) {
     if (filename.includes(symbol)) {
       return finvizURL(symbol);
     }
   }
-  if (filename === 'US_10Y.png') {
-    return 'https://ko.tradingeconomics.com/united-states/government-bond-yield';
+  
+  // Handle other file types with specific URLs
+  const urlMap: Record<string, string> = {
+    'US_10Y.png': URLS.US_10Y,
+    'KOSPI_monthly.png': URLS.KOSPI,
+    'KOSDAQ_monthly.png': URLS.KOSDAQ,
+    'finviz-home.png': URLS.FINVIZ_HOME
+  };
+  
+  return urlMap[filename];
+}
+
+/**
+ * Get list of files from the test results directory
+ */
+const getScreenshotFiles = (): string[] => {
+  try {
+    return fs.readdirSync(TEST_RESULT_PATH)
+      .filter(filename => filename.endsWith('.png'));
+  } catch (error) {
+    console.error(`Error reading directory ${TEST_RESULT_PATH}:`, error);
+    return [];
   }
 };
 
-uploadFile();
+/**
+ * Upload screenshots to Slack
+ */
+const uploadScreenshots = async (): Promise<void> => {
+  try {
+    // Post initial message to create thread
+    const chatResult = await client.chat.postMessage({
+      channel: SLACK_CHANNEL_ID,
+      text: `Market data screenshots - ${getKSTTimestamp()}`,
+    });
+    
+    if (!chatResult.ok || !chatResult.ts) {
+      throw new Error(`Failed to post initial message: ${chatResult.error}`);
+    }
+    
+    const thread_ts = chatResult.ts;
+    const files = getScreenshotFiles();
+    
+    if (files.length === 0) {
+      console.warn("No screenshot files found to upload");
+      return;
+    }
+    
+    console.log(`Uploading ${files.length} files to Slack...`);
+    
+    // Process files in batches to avoid rate limits
+    const BATCH_SIZE = 5;
+    const batches: string[][] = [];
+    
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      batches.push(files.slice(i, i + BATCH_SIZE));
+    }
+    
+    for (const batch of batches) {
+      await Promise.all(
+        batch.map(async (fileName) => {
+          const url = getUrlFromFilename(fileName);
+          const filePath = path.join(TEST_RESULT_PATH, fileName);
+          
+          try {
+            const result = await client.files.uploadV2({
+              channels: SLACK_CHANNEL_ID,
+              initial_comment: url ? `${fileName} ${url}` : fileName,
+              file: filePath,
+              filename: fileName,
+              thread_ts,
+            });
+            
+            if (result.ok) {
+              console.log(`Successfully uploaded ${fileName}`);
+            } else {
+              console.error(`Failed to upload ${fileName}: ${result.error}`);
+            }
+          } catch (uploadError) {
+            console.error(`Error uploading ${fileName}:`, uploadError);
+          }
+        })
+      );
+      
+      // Add delay between batches to avoid rate limits
+      if (batches.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    console.log('All files uploaded successfully');
+  } catch (error) {
+    console.error("Failed to upload screenshots:", error);
+    process.exit(1);
+  }
+};
+
+// Execute the upload function
+uploadScreenshots();
