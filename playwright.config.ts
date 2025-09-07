@@ -1,78 +1,75 @@
 import { defineConfig, devices } from "@playwright/test";
+import { TEST_RESULT_PATH } from "./define";
+
+// Load environment variables from .env file if it exists
+// require('dotenv').config() can be used if dotenv package is installed
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
-
-/**
- * See https://playwright.dev/docs/test-configuration.
+ * See https://playwright.dev/docs/test-configuration for more options
  */
 export default defineConfig({
+  // Directory where tests are located
   testDir: "./tests",
-  /* Run tests in files in parallel */
-  fullyParallel: true,
+  
+  // Directory where test results will be stored
+  outputDir: TEST_RESULT_PATH,
+  
+  // Maximum time one test can run (5 minutes)
   timeout: 300000,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  
+  // Run tests in files in parallel for better performance
+  fullyParallel: true,
+  
+  // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: "html",
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  
+  // Retry failed tests on CI for better stability
+  retries: process.env.CI ? 2 : 1,
+  
+  // Limit parallel tests on CI to avoid resource issues
+  workers: process.env.CI ? 1 : 3,
+  
+  // Use HTML reporter for nice visual test reports
+  reporter: [
+    ['html', { open: 'never' }],
+    ['list', { printSteps: true }]
+  ],
+  
+  // Global test setup
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://127.0.0.1:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: "on-first-retry",
+    // Base viewport size for consistent screenshots
+    viewport: { width: 1920, height: 1080 },
+    
+    // Enable screenshot on failure for debugging
+    screenshot: 'only-on-failure',
+    
+    // Collect trace for failed tests for debugging
+    trace: 'retain-on-failure',
+    
+    // Capture video for failed tests
+    video: 'on-first-retry',
+    
+    // Set navigation timeout
+    navigationTimeout: 30000,
+    
+    // Wait for network to be idle before considering navigation complete
+    actionTimeout: 15000,
   },
 
-  /* Configure projects for major browsers */
+  // Browser configurations
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: { 
+        ...devices["Desktop Chrome"],
+        // Use headless browsers in CI, headed locally for debugging
+        headless: !!process.env.CI,
+      },
     },
-
+    // Uncomment additional browser configurations as needed
     // {
     //   name: 'firefox',
     //   use: { ...devices['Desktop Firefox'] },
     // },
-
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ..devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://127.0.0.1:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });
