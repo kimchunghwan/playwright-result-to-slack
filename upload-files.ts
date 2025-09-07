@@ -65,17 +65,7 @@ const getScreenshotFiles = (): string[] => {
  */
 const uploadScreenshots = async (): Promise<void> => {
   try {
-    // Post initial message to create thread
-    const chatResult = await client.chat.postMessage({
-      channel: SLACK_CHANNEL_ID,
-      text: `Market data screenshots - ${getKSTTimestamp()}`,
-    });
-    
-    if (!chatResult.ok || !chatResult.ts) {
-      throw new Error(`Failed to post initial message: ${chatResult.error}`);
-    }
-    
-    const thread_ts = chatResult.ts;
+    // Get all screenshot files
     const files = getScreenshotFiles();
     
     if (files.length === 0) {
@@ -83,49 +73,115 @@ const uploadScreenshots = async (): Promise<void> => {
       return;
     }
     
-    console.log(`Uploading ${files.length} files to Slack...`);
+    // Check if fear-and-greed.png exists
+    const fearAndGreedIndex = files.findIndex(file => file === 'fear-and-greed.png');
+    const fearAndGreedFile = fearAndGreedIndex >= 0 ? files[fearAndGreedIndex] : null;
     
-    // Process files in batches to avoid rate limits
-    const BATCH_SIZE = 5;
-    const batches: string[][] = [];
-    
-    for (let i = 0; i < files.length; i += BATCH_SIZE) {
-      batches.push(files.slice(i, i + BATCH_SIZE));
+    // If fear-and-greed.png exists, remove it from the main files array
+    if (fearAndGreedIndex >= 0) {
+      files.splice(fearAndGreedIndex, 1);
     }
     
-    for (const batch of batches) {
-      await Promise.all(
-        batch.map(async (fileName) => {
-          const url = getUrlFromFilename(fileName);
-          const filePath = path.join(TEST_RESULT_PATH, fileName);
-          
-          try {
-            const result = await client.files.uploadV2({
-              channels: SLACK_CHANNEL_ID,
-              initial_comment: url ? `${fileName} ${url}` : fileName,
-              file: filePath,
-              filename: fileName,
-              thread_ts,
-            });
-            
-            if (result.ok) {
-              console.log(`Successfully uploaded ${fileName}`);
-            } else {
-              console.error(`Failed to upload ${fileName}: ${result.error}`);
-            }
-          } catch (uploadError) {
-            console.error(`Error uploading ${fileName}:`, uploadError);
-          }
-        })
-      );
+    // Post initial message with fear-and-greed image if it exists
+    let initialText = `Market data screenshots - ${getKSTTimestamp()}`;
+    
+    // Upload fear-and-greed image with the main message if it exists
+    if (fearAndGreedFile) {
+      const fearAndGreedPath = path.join(TEST_RESULT_PATH, fearAndGreedFile);
       
-      // Add delay between batches to avoid rate limits
-      if (batches.length > 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      const fearAndGreedResult = await client.files.uploadV2({
+        channels: SLACK_CHANNEL_ID,
+        initial_comment: initialText,
+        file: fearAndGreedPath,
+        filename: fearAndGreedFile
+      });
+      
+      if (fearAndGreedResult.ok) {
+        console.log(`Successfully uploaded ${fearAndGreedFile} with main message`);
+      } else {
+        console.error(`Failed to upload ${fearAndGreedFile}: ${fearAndGreedResult.error}`);
+        // If fear-and-greed upload failed, send a regular message
+        const chatResult = await client.chat.postMessage({
+          channel: SLACK_CHANNEL_ID,
+          text: initialText,
+        });
+        
+        if (!chatResult.ok || !chatResult.ts) {
+          throw new Error(`Failed to post initial message: ${chatResult.error}`);
+        }
+      }
+    } else {
+      // Just post a regular text message if fear-and-greed doesn't exist
+      const chatResult = await client.chat.postMessage({
+        channel: SLACK_CHANNEL_ID,
+        text: initialText,
+      });
+      
+      if (!chatResult.ok || !chatResult.ts) {
+        throw new Error(`Failed to post initial message: ${chatResult.error}`);
       }
     }
     
-    console.log('All files uploaded successfully');
+    // Get the recent message thread for the remaining files
+    const history = await client.conversations.history({ 
+      channel: SLACK_CHANNEL_ID, 
+      limit: 1 
+    });
+    
+    if (!history.ok || !history.messages || history.messages.length === 0) {
+      throw new Error(`Failed to get conversation history: ${history.error}`);
+    }
+    
+    const thread_ts = history.messages[0].ts;
+    
+    // If there are remaining files, upload them to the thread
+    if (files.length > 0) {
+      console.log(`Uploading ${files.length} remaining files to Slack thread...`);
+      
+      // Process files in batches to avoid rate limits
+      const BATCH_SIZE = 5;
+      const batches: string[][] = [];
+      
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        batches.push(files.slice(i, i + BATCH_SIZE));
+      }
+    
+      for (const batch of batches) {
+        await Promise.all(
+          batch.map(async (fileName) => {
+            const url = getUrlFromFilename(fileName);
+            const filePath = path.join(TEST_RESULT_PATH, fileName);
+            
+            try {
+              const result = await client.files.uploadV2({
+                channels: SLACK_CHANNEL_ID,
+                initial_comment: url ? `${fileName} ${url}` : fileName,
+                file: filePath,
+                filename: fileName,
+                thread_ts,
+              });
+              
+              if (result.ok) {
+                console.log(`Successfully uploaded ${fileName}`);
+              } else {
+                console.error(`Failed to upload ${fileName}: ${result.error}`);
+              }
+            } catch (uploadError) {
+              console.error(`Error uploading ${fileName}:`, uploadError);
+            }
+          })
+        );
+        
+        // Add delay between batches to avoid rate limits
+        if (batches.length > 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      console.log('All files uploaded successfully');
+    } else {
+      console.log('No additional files to upload to thread');
+    }
   } catch (error) {
     console.error("Failed to upload screenshots:", error);
     process.exit(1);
