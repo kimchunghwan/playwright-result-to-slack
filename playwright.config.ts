@@ -63,7 +63,7 @@ export default defineConfig({
       use: { 
         ...devices["Desktop Chrome"],
         // Use headless browsers in CI, headed locally for debugging
-        headless: !!process.env.CI,
+        headless: true,  //!!process.env.CI,
       },
     },
     // Uncomment additional browser configurations as needed
