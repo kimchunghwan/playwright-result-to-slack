@@ -7,7 +7,7 @@ test('US 10-Year Bond Yield', async ({ page }) => {
   
   // Navigate to the bond yield page
   await page.goto('https://ko.tradingeconomics.com/united-states/government-bond-yield', { 
-    waitUntil: 'networkidle' 
+    // waitUntil: 'networkidle' 
   });
   
   // Click on the 5Y tab and wait for chart to update
