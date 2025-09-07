@@ -1,10 +1,10 @@
-import { test } from "@playwright/test";
+import { Page, test } from "@playwright/test";
 import { FINVIZ_SYMBOLS, finvizURL, TEST_RESULT_PATH, URLS } from "../define";
 
 /**
  * Helper function to capture a chart screenshot with proper error handling
  */
-const captureChart = async (page, url, selector, fileName) => {
+const captureChart = async (page: Page, url: string, selector: string, fileName: string) => {
   // Set viewport size for consistent screenshots
   await page.setViewportSize({ width: 1920, height: 1080 });
   
@@ -90,16 +90,3 @@ test.describe("Finviz Stock Charts", () => {
     });
   }
 });
-
-// test.describe("CNN Fear and Greed", () => {
-//   test("CNN Fear and Greed", async ({ page }) => {
-//     page
-//       .goto("https://edition.cnn.com/markets/fear-and-greed")
-//       .catch((e: any) => {});
-//     await page.waitForTimeout(2000);
-//     await page
-//       .locator(".market-tabbed-container")
-//       .screenshot({ path: `./${testResultPath}/fear-and-greed.png` })
-//       .catch((e: any) => {});
-//   });
-// });
