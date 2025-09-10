@@ -84,7 +84,7 @@ const uploadScreenshots = async (): Promise<void> => {
     
     // Post initial message with fear-and-greed image if it exists
     let initialText = `Market data screenshots - ${getKSTTimestamp()}`;
-    let initialMessageTs: string | undefined | unknown;
+    let initialMessageTs: string | undefined;
     
     // Upload fear-and-greed image with the main message if it exists
     if (fearAndGreedFile) {
@@ -96,7 +96,7 @@ const uploadScreenshots = async (): Promise<void> => {
         file: fearAndGreedPath,
         filename: fearAndGreedFile
       });
-      initialMessageTs = fearAndGreedResult.ts;
+      initialMessageTs = fearAndGreedResult.ts as string;
 
       if (fearAndGreedResult.ok) {
         console.log(`Successfully uploaded ${fearAndGreedFile} with main message`);
