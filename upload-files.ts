@@ -84,6 +84,7 @@ const uploadScreenshots = async (): Promise<void> => {
     
     // Post initial message with fear-and-greed image if it exists
     let initialText = `Market data screenshots - ${getKSTTimestamp()}`;
+    let initialMessageTs: string | undefined | unknown;
     
     // Upload fear-and-greed image with the main message if it exists
     if (fearAndGreedFile) {
@@ -95,20 +96,12 @@ const uploadScreenshots = async (): Promise<void> => {
         file: fearAndGreedPath,
         filename: fearAndGreedFile
       });
-      
+      initialMessageTs = fearAndGreedResult.ts;
+
       if (fearAndGreedResult.ok) {
         console.log(`Successfully uploaded ${fearAndGreedFile} with main message`);
       } else {
         console.error(`Failed to upload ${fearAndGreedFile}: ${fearAndGreedResult.error}`);
-        // If fear-and-greed upload failed, send a regular message
-        const chatResult = await client.chat.postMessage({
-          channel: SLACK_CHANNEL_ID,
-          text: initialText,
-        });
-        
-        if (!chatResult.ok || !chatResult.ts) {
-          throw new Error(`Failed to post initial message: ${chatResult.error}`);
-        }
       }
     } else {
       // Just post a regular text message if fear-and-greed doesn't exist
@@ -120,20 +113,11 @@ const uploadScreenshots = async (): Promise<void> => {
       if (!chatResult.ok || !chatResult.ts) {
         throw new Error(`Failed to post initial message: ${chatResult.error}`);
       }
+      initialMessageTs = chatResult.ts;
     }
-    
-    // Get the recent message thread for the remaining files
-    const history = await client.conversations.history({ 
-      channel: SLACK_CHANNEL_ID, 
-      limit: 1 
-    });
-    
-    if (!history.ok || !history.messages || history.messages.length === 0) {
-      throw new Error(`Failed to get conversation history: ${history.error}`);
-    }
-    
-    const thread_ts = history.messages[0].ts;
-    
+
+    const thread_ts = initialMessageTs;
+
     // If there are remaining files, upload them to the thread
     if (files.length > 0) {
       console.log(`Uploading ${files.length} remaining files to Slack thread...`);
