@@ -84,7 +84,7 @@ const uploadScreenshots = async (): Promise<void> => {
     
     // Post initial message with fear-and-greed image if it exists
     let initialText = `Market data screenshots - ${getKSTTimestamp()}`;
-    let initialMessageTs: string | undefined;
+    let initialMessageTs: string | undefined | unknown;
     
     // Upload fear-and-greed image with the main message if it exists
     if (fearAndGreedFile) {
@@ -96,20 +96,12 @@ const uploadScreenshots = async (): Promise<void> => {
         file: fearAndGreedPath,
         filename: fearAndGreedFile
       });
-      
+      initialMessageTs = fearAndGreedResult.ts;
+
       if (fearAndGreedResult.ok) {
         console.log(`Successfully uploaded ${fearAndGreedFile} with main message`);
       } else {
         console.error(`Failed to upload ${fearAndGreedFile}: ${fearAndGreedResult.error}`);
-        // If fear-and-greed upload failed, send a regular message
-        const chatResult = await client.chat.postMessage({
-          channel: SLACK_CHANNEL_ID,
-          text: initialText,
-        });
-        
-        if (!chatResult.ok || !chatResult.ts) {
-          throw new Error(`Failed to post initial message: ${chatResult.error}`);
-        }
       }
     } else {
       // Just post a regular text message if fear-and-greed doesn't exist
