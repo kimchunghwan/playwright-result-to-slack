@@ -1,0 +1,67 @@
+name: File Change Alert to Slack
+
+on:
+  pull_request:
+    #   push:
+    branches:
+      - main # 알림을 보낼 브랜치 지정
+    paths:
+      - "config/**" # config 디렉토리 내의 모든 파일 변경 감지
+      - "README.md" # 특정 파일 변경 감지
+
+jobs:
+  notify_slack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # fetch-depth: 2는 이전 커밋과의 비교를 위해 최소한의 커밋 히스토리를 가져옵니다.
+        # file-change 감지를 위해 전체 히스토리가 필요한 경우 0으로 설정할 수도 있습니다.
+        with:
+          fetch-depth: 2
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # 이전 커밋과 현재 커밋을 비교하여 변경된 파일 목록을 가져옴
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          echo "changed_files_list<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Slack message payload
+        id: slack-payload
+        run: |
+          # 변경된 파일 목록을 메시지 내용으로 설정
+          MESSAGE="특정 파일이 변경되었습니다. (브랜치: ${{ github.ref_name }})\n\n*변경 파일 목록:*\n${{ steps.changed-files.outputs.changed_files_list }}"
+          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+
+      - name: Send Slack notification
+        # slackapi/slack-github-action과 같은 Action 사용
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          # Slack 웹훅 URL Secret 사용
+          payload: |
+            {
+              "text": "${{ steps.slack-payload.outputs.message }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ steps.slack-payload.outputs.message }}"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "GitHub Commit: <${{ github.event.compare }}|${{ github.sha }}>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # GitHub Secret에 등록된 웹훅 URL
