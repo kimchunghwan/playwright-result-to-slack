@@ -117,4 +117,4 @@ ISC
 
 - [Playwright](https://playwright.dev/)
 - [Slack API](https://api.slack.com/)
-- [Finviz](https://finviz.com/)
+- [Finviz](https://finviz.com/)    
