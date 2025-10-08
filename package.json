@@ -1,23 +1,35 @@
 {
-  "name": "playwright",
+  "name": "playwright-result-to-slack",
   "version": "1.0.0",
-  "description": "",
+  "description": "Tool for capturing market screenshots and uploading them to Slack",
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "test:stock-kr": "playwright test tests/stock-kr.spec.ts",
-    "test:stock-us": "playwright test tests/stock-us.spec.ts",
-    "upload:files": "ts-node upload-files.ts"
+    "test:all": "playwright test && npm run upload",
+    "test:stock": "playwright test tests/stock.spec.ts",
+    "test:bond": "playwright test tests/bond-yield.spec.ts",
+    "upload": "ts-node upload-files.ts",
+    "debug": "playwright test --debug",
+    "clean": "rm -rf test-results/*.png",
+    "report": "playwright show-report",
+    "lint": "tsc --noEmit"
   },
-  "keywords": [],
+  "keywords": [
+    "playwright",
+    "slack",
+    "automation",
+    "screenshots",
+    "financial-data"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.32.3",
-    "ts-node": "^10.9.2"
+    "@types/node": "^18.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^4.9.0"
   },
   "dependencies": {
-    "@slack/web-api": "^6.11.2",
-    "jest": "^29.7.0"
+    "@slack/web-api": "^6.11.2"
   }
 }
