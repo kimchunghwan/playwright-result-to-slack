@@ -51,5 +51,5 @@ jobs:
           path: test-results
 
       - name: upload to slack
-        continue-on-error: true # 업로드 실패해도 워크플로우는 성공으로 처리
+        continue-on-error: true # 업로드 실패해도 워크플로우는 성공으로 처리1
         run: npm run upload
