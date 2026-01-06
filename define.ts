@@ -5,7 +5,7 @@ export const UTC_OFFSET_HOURS = 9;
 
 // Stock symbols
 const SYMBOLS = ["TSLA", "PLTR", "QQQ", "SOXX", "SCHD", "IVV", "TLT", "GOOGL", "CWEB", "QTUM"];
-const GROWTH_SYMBOLS = ["TSLA", "PLTR", "QQQ", "SOXX", "RXRX", "NVDA", "CWEB"];
+const GROWTH_SYMBOLS = ["TSLA", "PLTR", "QQQ", "SOXX", "NVDA", "CWEB"];
 export const FINVIZ_SYMBOLS = Array.from(new Set([...SYMBOLS, ...GROWTH_SYMBOLS]));
 
 // URL generators
