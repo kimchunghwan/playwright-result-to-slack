@@ -40,7 +40,8 @@ jobs:
         # slackapi/slack-github-action과 같은 Action 사용
         uses: slackapi/slack-github-action@v1.25.0
         with:
-          # Slack 웹훅 URL Secret 사용
+          # Slack Bot User OAuth Token 사용
+          channel-id: '#general' # 메시지를 전송할 채널
           payload: |
             {
               "text": "${{ steps.slack-payload.outputs.message }}",
@@ -64,4 +65,4 @@ jobs:
               ]
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} # GitHub Secret에 등록된 웹훅 URL
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} # GitHub Secret에 등록된 Bot User OAuth Token
