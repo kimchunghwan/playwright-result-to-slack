@@ -4,10 +4,10 @@ on:
   pull_request:
     #   push:
     branches:
-      - main # 알림을 보낼 브랜치 지정
+      - main
     paths:
-      - "config/**" # config 디렉토리 내의 모든 파일 변경 감지
-      - "README.md" # 특정 파일 변경 감지
+      - "config/**" # specific directory change detection
+      - "README.md" # specific file change detection
 
 jobs:
   notify_slack:
@@ -15,15 +15,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        # fetch-depth: 2는 이전 커밋과의 비교를 위해 최소한의 커밋 히스토리를 가져옵니다.
-        # file-change 감지를 위해 전체 히스토리가 필요한 경우 0으로 설정할 수도 있습니다.
         with:
           fetch-depth: 2
 
       - name: Get changed files
         id: changed-files
         run: |
-          # 이전 커밋과 현재 커밋을 비교하여 변경된 파일 목록을 가져옴
           CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
           echo "changed_files_list<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
@@ -32,22 +29,21 @@ jobs:
       - name: Create Slack message payload
         id: slack-payload
         run: |
-          # 변경된 파일 목록을 메시지 내용으로 설정
+          # build message for changed
           {
             echo "message<<EOF"
-            echo "특정 파일이 변경되었습니다. (브랜치: ${{ github.ref_name }})"
+            echo "file changed. (branch: ${{ github.ref_name }})"
             echo ""
-            echo "*변경 파일 목록:*"
+            echo "*changed file list:*"
             echo "${{ steps.changed-files.outputs.changed_files_list }}"
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
       - name: Send Slack notification
-        # slackapi/slack-github-action과 같은 Action 사용
         uses: slackapi/slack-github-action@v1.25.0
         with:
           # Slack Bot User OAuth Token 사용
-          channel-id: "#times_kimchunghwan" # 메시지를 전송할 채널
+          channel-id: "#times_kimchunghwan" # slack channel name or ID
           payload: |
             {
               "text": ${{ toJSON(steps.slack-payload.outputs.message) }},
@@ -71,4 +67,4 @@ jobs:
               ]
             }
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }} # GitHub Secret에 등록된 Bot User OAuth Token
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
