@@ -33,8 +33,14 @@ jobs:
         id: slack-payload
         run: |
           # 변경된 파일 목록을 메시지 내용으로 설정
-          MESSAGE="특정 파일이 변경되었습니다. (브랜치: ${{ github.ref_name }})\n\n*변경 파일 목록:*\n${{ steps.changed-files.outputs.changed_files_list }}"
-          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
+          {
+            echo "message<<EOF"
+            echo "특정 파일이 변경되었습니다. (브랜치: ${{ github.ref_name }})"
+            echo ""
+            echo "*변경 파일 목록:*"
+            echo "${{ steps.changed-files.outputs.changed_files_list }}"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Send Slack notification
         # slackapi/slack-github-action과 같은 Action 사용
