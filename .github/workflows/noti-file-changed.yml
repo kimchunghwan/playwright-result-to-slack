@@ -47,7 +47,7 @@ jobs:
         uses: slackapi/slack-github-action@v1.25.0
         with:
           # Slack Bot User OAuth Token 사용
-          channel-id: '#general' # 메시지를 전송할 채널
+          channel-id: "#times_kimchunghwan" # 메시지를 전송할 채널
           payload: |
             {
               "text": ${{ toJSON(steps.slack-payload.outputs.message) }},
