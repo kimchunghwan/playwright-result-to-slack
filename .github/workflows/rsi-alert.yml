@@ -1,0 +1,42 @@
+name: RSI Oversold Alert
+
+on:
+  workflow_dispatch: # Allow manual trigger for testing
+  schedule:
+    # Run at 21:05 UTC (06:05 KST next day) — after US market close (21:00 UTC)
+    - cron: "5 21 * * 1-5"
+
+env:
+  NODE_VERSION: "20.x"
+  SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+permissions:
+  contents: read
+
+jobs:
+  rsi-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Cache Playwright binaries
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies and Playwright
+        run: |
+          npm ci
+          npx playwright install chromium
+
+      - name: Check RSI and send Slack alert if oversold
+        run: npm run rsi-alert
