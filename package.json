@@ -9,6 +9,7 @@
     "test:stock": "playwright test tests/stock.spec.ts",
     "test:bond": "playwright test tests/bond-yield.spec.ts",
     "upload": "ts-node upload-files.ts",
+    "rsi-alert": "ts-node rsi-alert.ts",
     "debug": "playwright test --debug",
     "clean": "rm -rf test-results/*.png",
     "report": "playwright show-report",
@@ -30,6 +31,7 @@
     "typescript": "^4.9.0"
   },
   "dependencies": {
-    "@slack/web-api": "^6.11.2"
+    "@slack/web-api": "^6.11.2",
+    "yahoo-finance2": "^3.13.0"
   }
 }
