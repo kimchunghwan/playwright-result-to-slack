@@ -24,6 +24,8 @@ interface StockIndicators {
   price: number;
   rsi: number;
   signal: number;
+  ma5: number;
+  ma10: number;
   ma20: number;
   ma50: number;
   ma200: number;
@@ -38,7 +40,7 @@ function formatPrice(price: number, currency: Currency): string {
 }
 
 /**
- * Calculate RSI(14), Signal(9), MA20, MA50, MA200 from closing price series
+ * Calculate RSI(14), Signal(9), MA5, MA10, MA20, MA50, MA200 from closing price series
  */
 function calculateIndicators(closes: number[]): Omit<StockIndicators, "symbol" | "chartUrl" | "currency"> | null {
   if (closes.length < Math.max(RSI_PERIOD + SIGNAL_PERIOD, MA_LONG)) return null;
@@ -67,7 +69,7 @@ function calculateIndicators(closes: number[]): Omit<StockIndicators, "symbol" |
     signal = rsiSeries[i] * k + signal * (1 - k);
   }
 
-  // --- MA20 / MA50 / MA200 (SMA) ---
+  // --- MA5 / MA10 / MA20 / MA50 / MA200 (SMA) ---
   const sma = (n: number) =>
     closes.slice(-n).reduce((a, b) => a + b, 0) / n;
 
@@ -75,6 +77,8 @@ function calculateIndicators(closes: number[]): Omit<StockIndicators, "symbol" |
     price: closes[closes.length - 1],
     rsi: rsiSeries[rsiSeries.length - 1],
     signal,
+    ma5: sma(5),
+    ma10: sma(10),
     ma20: sma(MA_SHORT),
     ma50: sma(MA_MID),
     ma200: sma(MA_LONG),
@@ -119,6 +123,8 @@ async function sendSlackAlert(stocks: StockIndicators[], market: string): Promis
       const fp = formatPrice(s.price, s.currency);
       const fm = (n: number) => formatPrice(n, s.currency);
       const maLine =
+        `MA5 \`${fm(s.ma5)}\` ${s.price >= s.ma5 ? ":large_green_circle:" : ":red_circle:"}  ` +
+        `MA10 \`${fm(s.ma10)}\` ${s.price >= s.ma10 ? ":large_green_circle:" : ":red_circle:"}  ` +
         `MA20 \`${fm(s.ma20)}\` ${s.price >= s.ma20 ? ":large_green_circle:" : ":red_circle:"}  ` +
         `MA50 \`${fm(s.ma50)}\` ${s.price >= s.ma50 ? ":large_green_circle:" : ":red_circle:"}  ` +
         `MA200 \`${fm(s.ma200)}\` ${s.price >= s.ma200 ? ":large_green_circle:" : ":red_circle:"}`;
