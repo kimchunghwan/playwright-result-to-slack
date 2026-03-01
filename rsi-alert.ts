@@ -1,6 +1,6 @@
 import YahooFinance from "yahoo-finance2";
 import { WebClient, LogLevel } from "@slack/web-api";
-import { FINVIZ_SYMBOLS, KR_SYMBOLS, SLACK_CHANNEL_ID, finvizURL, naverURL } from "./define";
+import { FINVIZ_SYMBOLS, KR_SYMBOLS, JP_SYMBOLS, SLACK_CHANNEL_ID, finvizURL, naverURL, kabutanURL } from "./define";
 
 const yahooFinance = new YahooFinance({ suppressNotices: ["ripHistorical"] });
 
@@ -15,7 +15,7 @@ const client = new WebClient(process.env.SLACK_BOT_TOKEN, {
   logLevel: LogLevel.ERROR,
 });
 
-type Currency = "USD" | "KRW";
+type Currency = "USD" | "KRW" | "JPY";
 
 interface StockIndicators {
   symbol: string;    // display label (e.g. "TSLA" or "005930")
@@ -35,6 +35,9 @@ interface StockIndicators {
 function formatPrice(price: number, currency: Currency): string {
   if (currency === "KRW") {
     return `₩${Math.round(price).toLocaleString("en-US")}`;
+  }
+  if (currency === "JPY") {
+    return `¥${Math.round(price).toLocaleString("en-US")}`;
   }
   return `$${price.toFixed(2)}`;
 }
@@ -109,14 +112,9 @@ async function fetchIndicators(
   return calculateIndicators(closes);
 }
 
-/**
- * Send Slack alert for stocks with RSI below threshold
- */
-async function sendSlackAlert(stocks: StockIndicators[], market: string): Promise<void> {
-  const now = new Date(Date.now() + 9 * 60 * 60 * 1000); // UTC+9
-  const dateStr = now.toISOString().replace("T", " ").slice(0, 16);
-
-  const stockLines = stocks
+/** Build a formatted stock list string sorted by RSI ascending */
+function buildStockLines(stocks: StockIndicators[]): string {
+  return [...stocks]
     .sort((a, b) => a.rsi - b.rsi)
     .map((s) => {
       const rsiArrow = s.rsi < s.signal ? ":arrow_down_small:" : ":arrow_up_small:";
@@ -128,7 +126,6 @@ async function sendSlackAlert(stocks: StockIndicators[], market: string): Promis
         `MA20 \`${fm(s.ma20)}\` ${s.price >= s.ma20 ? ":large_green_circle:" : ":red_circle:"}  ` +
         `MA50 \`${fm(s.ma50)}\` ${s.price >= s.ma50 ? ":large_green_circle:" : ":red_circle:"}  ` +
         `MA200 \`${fm(s.ma200)}\` ${s.price >= s.ma200 ? ":large_green_circle:" : ":red_circle:"}`;
-
       return (
         `• *<${s.chartUrl}|${s.symbol}>*  Price \`${fp}\`\n` +
         `  RSI(14) \`${s.rsi.toFixed(2)}\`  Signal(9) \`${s.signal.toFixed(2)}\` ${rsiArrow}\n` +
@@ -136,20 +133,64 @@ async function sendSlackAlert(stocks: StockIndicators[], market: string): Promis
       );
     })
     .join("\n\n");
+}
 
-  const message =
-    `*:rotating_light: RSI Oversold Alert — ${market}  (RSI(14) ≤ ${RSI_THRESHOLD})*\n` +
-    `_${dateStr} KST_\n\n` +
-    `${stockLines}\n\n` +
+/**
+ * Send Slack alert: one header message + US thread + KOSPI thread + Nikkei thread
+ */
+async function sendSlackAlert(
+  usStocks: StockIndicators[],
+  krStocks: StockIndicators[],
+  jpStocks: StockIndicators[]
+): Promise<void> {
+  const now = new Date(Date.now() + 9 * 60 * 60 * 1000); // UTC+9
+  const dateStr = now.toISOString().replace("T", " ").slice(0, 16);
+
+  // 1. Post header message to the channel
+  const headerMessage =
+    `*:rotating_light: RSI Oversold Alert  (RSI(14) ≤ ${RSI_THRESHOLD})*\n` +
+    `_${dateStr} KST_  •  :us: US ${usStocks.length}개  :kr: KOSPI ${krStocks.length}개  :flag-jp: Nikkei ${jpStocks.length}개\n\n` +
     `_:large_green_circle: price above MA  :red_circle: price below MA_`;
 
-  await client.chat.postMessage({
+  const headerResult = await client.chat.postMessage({
     channel: SLACK_CHANNEL_ID,
-    text: message,
+    text: headerMessage,
     mrkdwn: true,
   });
 
-  console.log(`[${market}] Slack alert sent for ${stocks.length} stock(s).`);
+  const threadTs = headerResult.ts;
+
+  // 2. Post US stocks as a single thread reply
+  if (usStocks.length > 0) {
+    await client.chat.postMessage({
+      channel: SLACK_CHANNEL_ID,
+      text: `*:us: US — ${usStocks.length} stock(s)*\n\n${buildStockLines(usStocks)}`,
+      mrkdwn: true,
+      thread_ts: threadTs,
+    });
+  }
+
+  // 3. Post KOSPI stocks as a single thread reply
+  if (krStocks.length > 0) {
+    await client.chat.postMessage({
+      channel: SLACK_CHANNEL_ID,
+      text: `*:kr: KOSPI — ${krStocks.length} stock(s)*\n\n${buildStockLines(krStocks)}`,
+      mrkdwn: true,
+      thread_ts: threadTs,
+    });
+  }
+
+  // 4. Post Nikkei 225 stocks as a single thread reply
+  if (jpStocks.length > 0) {
+    await client.chat.postMessage({
+      channel: SLACK_CHANNEL_ID,
+      text: `*:flag-jp: Nikkei 225 — ${jpStocks.length} stock(s)*\n\n${buildStockLines(jpStocks)}`,
+      mrkdwn: true,
+      thread_ts: threadTs,
+    });
+  }
+
+  console.log(`Slack alert sent: US ${usStocks.length}, KOSPI ${krStocks.length}, Nikkei ${jpStocks.length} stock(s).`);
 }
 
 /**
@@ -196,45 +237,47 @@ async function collectOversold(
 }
 
 /**
- * Main: check RSI(14)(9) + MA20/50/200 for US and KOSPI stocks
+ * Main: check RSI(14)(9) + MA20/50/200 for US, KOSPI, and Nikkei 225 stocks
+ * Optional argv[2]: "us" | "kr" | "jp" — run only that market
  */
 async function checkRSIAndAlert(): Promise<void> {
+  const target = (process.argv[2] ?? "all").toLowerCase();
+  const runUs = target === "all" || target === "us";
+  const runKr = target === "all" || target === "kr";
+  const runJp = target === "all" || target === "jp";
+
+  const markets = [
+    runUs ? `${FINVIZ_SYMBOLS.length} US` : null,
+    runKr ? `${KR_SYMBOLS.length} KOSPI` : null,
+    runJp ? `${JP_SYMBOLS.length} Nikkei 225` : null,
+  ].filter(Boolean).join(" + ");
+
   console.log(
     `Checking RSI(${RSI_PERIOD})(${SIGNAL_PERIOD}) + MA${MA_SHORT}/MA${MA_MID}/MA${MA_LONG} ` +
-    `for ${FINVIZ_SYMBOLS.length} US + ${KR_SYMBOLS.length} KOSPI symbols...`
+    `for ${markets} symbols...`
   );
 
   // US stocks (Finviz symbols, USD)
-  const usAlerts = await collectOversold(
-    FINVIZ_SYMBOLS,
-    (s) => s,                // Yahoo Finance symbol = ticker
-    (s) => finvizURL(s),
-    "USD"
-  );
+  const usAlerts = runUs
+    ? await collectOversold(FINVIZ_SYMBOLS, (s) => s, (s) => finvizURL(s), "USD")
+    : [];
 
   // KOSPI stocks (code + .KS for Yahoo Finance, KRW)
-  console.log("\n--- KOSPI ---");
-  const krAlerts = await collectOversold(
-    KR_SYMBOLS,
-    (s) => `${s}.KS`,       // Yahoo Finance symbol
-    (s) => naverURL(s),
-    "KRW"
-  );
+  if (runKr) console.log("\n--- KOSPI ---");
+  const krAlerts = runKr
+    ? await collectOversold(KR_SYMBOLS, (s) => `${s}.KS`, (s) => naverURL(s), "KRW")
+    : [];
 
-  // Send alerts per market (only if oversold stocks exist)
-  if (usAlerts.length > 0) {
-    await sendSlackAlert(usAlerts, "US");
+  // Nikkei 225 stocks (code + .T for Yahoo Finance, JPY)
+  if (runJp) console.log("\n--- Nikkei 225 ---");
+  const jpAlerts = runJp
+    ? await collectOversold(JP_SYMBOLS, (s) => `${s}.T`, (s) => kabutanURL(s), "JPY")
+    : [];
+
+  // Send a single alert with collected markets as separate thread replies
+  if (usAlerts.length > 0 || krAlerts.length > 0 || jpAlerts.length > 0) {
+    await sendSlackAlert(usAlerts, krAlerts, jpAlerts);
   } else {
-    console.log("No US stocks with RSI ≤ 30.");
-  }
-
-  if (krAlerts.length > 0) {
-    await sendSlackAlert(krAlerts, "KOSPI");
-  } else {
-    console.log("No KOSPI stocks with RSI ≤ 30.");
-  }
-
-  if (usAlerts.length === 0 && krAlerts.length === 0) {
     console.log(`No stocks with RSI(14) ≤ ${RSI_THRESHOLD}. No alert sent.`);
   }
 }

@@ -223,6 +223,113 @@ export const KR_SYMBOLS = [
 export const naverURL = (code: string): string =>
   `https://finance.naver.com/item/main.naver?code=${code}`;
 
+// Nikkei 225 major constituents — Yahoo Finance symbol format: append .T (e.g. "7203.T")
+export const JP_SYMBOLS = [
+  "7203", // Toyota Motor
+  "9984", // SoftBank Group
+  "6758", // Sony Group
+  "8035", // Tokyo Electron
+  "6861", // Keyence
+  "9432", // NTT
+  "9433", // KDDI
+  "9983", // Fast Retailing
+  "7267", // Honda Motor
+  "4063", // Shin-Etsu Chemical
+  "6954", // Fanuc
+  "7741", // HOYA
+  "4568", // Daiichi Sankyo
+  "4519", // Chugai Pharmaceutical
+  "6902", // Denso
+  "8306", // Mitsubishi UFJ Financial
+  "8316", // Sumitomo Mitsui Financial Group
+  "8411", // Mizuho Financial Group
+  "8058", // Mitsubishi Corporation
+  "8001", // Itochu Corporation
+  "8031", // Mitsui & Co.
+  "8002", // Marubeni
+  "8053", // Sumitomo Corporation
+  "4502", // Takeda Pharmaceutical
+  "4503", // Astellas Pharma
+  "6098", // Recruit Holdings
+  "6367", // Daikin Industries
+  "7974", // Nintendo
+  "6702", // Fujitsu
+  "4901", // Fujifilm Holdings
+  "5401", // Nippon Steel
+  "2914", // Japan Tobacco
+  "7733", // Olympus
+  "3382", // Seven & i Holdings
+  "2802", // Ajinomoto
+  "6501", // Hitachi
+  "6503", // Mitsubishi Electric
+  "6506", // Yaskawa Electric
+  "6762", // TDK
+  "6857", // Advantest
+  "6869", // Sysmex
+  "6723", // Renesas Electronics
+  "6752", // Panasonic Holdings
+  "6971", // Kyocera
+  "6981", // Murata Manufacturing
+  "7011", // Mitsubishi Heavy Industries
+  "7012", // Kawasaki Heavy Industries
+  "7013", // IHI
+  "7201", // Nissan Motor
+  "7269", // Suzuki Motor
+  "7270", // Subaru
+  "7309", // Shimano
+  "7735", // Screen Holdings
+  "7751", // Canon
+  "7832", // Bandai Namco
+  "7974", // Nintendo
+  "4661", // Oriental Land
+  "4452", // Kao
+  "4543", // Terumo
+  "4523", // Eisai
+  "4578", // Otsuka Holdings
+  "4507", // Shionogi
+  "4151", // Kyowa Kirin
+  "5108", // Bridgestone
+  "5201", // AGC
+  "5411", // JFE Holdings
+  "8267", // AEON
+  "8591", // Orix
+  "8604", // Nomura Holdings
+  "8630", // Sompo Holdings
+  "8725", // MS&AD Insurance
+  "8766", // Tokio Marine Holdings
+  "8801", // Mitsui Fudosan
+  "8802", // Mitsubishi Estate
+  "8830", // Sumitomo Realty
+  "9022", // Central Japan Railway
+  "9064", // Yamato Holdings
+  "9107", // Kawasaki Kisen
+  "9202", // ANA Holdings
+  "9434", // SoftBank Corp.
+  "9501", // Tokyo Electric Power
+  "9531", // Tokyo Gas
+  "9602", // Toho
+  "9735", // Secom
+  "9766", // Konami Group
+  "1605", // INPEX
+  "1925", // Daiwa House Industry
+  "1928", // Sekisui House
+  "2503", // Kirin Holdings
+  "2802", // Ajinomoto
+  "3402", // Toray Industries
+  "3407", // Asahi Kasei
+  "4004", // Resonac Holdings
+  "5020", // ENEOS Holdings
+  "6301", // Komatsu
+  "6326", // Kubota
+  "6645", // Omron
+  "6701", // NEC
+  "6920", // Lasertec
+  "9613", // NTT Data
+];
+
+export const kabutanURL = (code: string): string =>
+  `https://kabutan.jp/stock/chart?code=${code}`;
+
 // Financial data URLs
 export const URLS = {
   KOSPI: "https://finance.naver.com/sise/sise_index.naver?code=KOSPI",
