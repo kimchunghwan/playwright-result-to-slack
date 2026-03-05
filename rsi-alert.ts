@@ -18,8 +18,8 @@ const client = new WebClient(process.env.SLACK_BOT_TOKEN, {
 type Currency = "USD" | "KRW" | "JPY";
 
 interface StockIndicators {
-  symbol: string;    // display label (e.g. "TSLA" or "005930")
-  chartUrl: string;  // Finviz or Naver Finance URL
+  symbol: string;      // display label (e.g. "TSLA" or "005930")
+  chartUrl: string;    // Finviz or Naver Finance URL
   currency: Currency;
   price: number;
   rsi: number;
@@ -29,6 +29,9 @@ interface StockIndicators {
   ma20: number;
   ma50: number;
   ma200: number;
+  companyName?: string;
+  sector?: string;
+  industry?: string;
 }
 
 /** Format price based on currency */
@@ -112,6 +115,23 @@ async function fetchIndicators(
   return calculateIndicators(closes);
 }
 
+/** Fetch company name and sector from Yahoo Finance quoteSummary */
+async function fetchCompanyInfo(yahooSymbol: string): Promise<{ companyName?: string; sector?: string; industry?: string }> {
+  try {
+    const summary = await yahooFinance.quoteSummary(yahooSymbol, {
+      modules: ["assetProfile", "price"],
+    });
+    const profile = summary.assetProfile as { sector?: string; industry?: string } | undefined;
+    return {
+      companyName: summary.price?.longName ?? summary.price?.shortName ?? undefined,
+      sector: profile?.sector,
+      industry: profile?.industry,
+    };
+  } catch {
+    return {};
+  }
+}
+
 /** Build a formatted stock list string sorted by RSI ascending */
 function buildStockLines(stocks: StockIndicators[]): string {
   return [...stocks]
@@ -126,8 +146,12 @@ function buildStockLines(stocks: StockIndicators[]): string {
         `MA20 \`${fm(s.ma20)}\` ${s.price >= s.ma20 ? ":large_green_circle:" : ":red_circle:"}  ` +
         `MA50 \`${fm(s.ma50)}\` ${s.price >= s.ma50 ? ":large_green_circle:" : ":red_circle:"}  ` +
         `MA200 \`${fm(s.ma200)}\` ${s.price >= s.ma200 ? ":large_green_circle:" : ":red_circle:"}`;
+      const metaLine = [s.sector, s.industry].filter(Boolean).map((v) => `\`${v}\``).join(" › ");
+      const titleLine = s.companyName
+        ? `• *<${s.chartUrl}|${s.symbol}>*  _${s.companyName}_${metaLine ? `  ${metaLine}` : ""}  Price \`${fp}\``
+        : `• *<${s.chartUrl}|${s.symbol}>*  Price \`${fp}\``;
       return (
-        `• *<${s.chartUrl}|${s.symbol}>*  Price \`${fp}\`\n` +
+        `${titleLine}\n` +
         `  RSI(14) \`${s.rsi.toFixed(2)}\`  Signal(9) \`${s.signal.toFixed(2)}\` ${rsiArrow}\n` +
         `  ${maLine}`
       );
@@ -219,7 +243,8 @@ async function collectOversold(
         );
 
         if (ind.rsi <= RSI_THRESHOLD) {
-          return { symbol, chartUrl: toChartUrl(symbol), currency, ...ind };
+          const info = await fetchCompanyInfo(yahooSymbol);
+          return { symbol, chartUrl: toChartUrl(symbol), currency, ...ind, ...info };
         }
       } catch (error) {
         console.error(`Error processing ${symbol}: ${error}`);
