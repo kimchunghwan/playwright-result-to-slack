@@ -139,13 +139,10 @@ function buildStockLines(stocks: StockIndicators[]): string {
     .map((s) => {
       const rsiArrow = s.rsi < s.signal ? ":arrow_down_small:" : ":arrow_up_small:";
       const fp = formatPrice(s.price, s.currency);
-      const fm = (n: number) => formatPrice(n, s.currency);
+      const ma = (label: string, maVal: number) =>
+        `${label} ${s.price >= maVal ? ":large_green_circle:" : ":red_circle:"}`;
       const maLine =
-        `MA5 \`${fm(s.ma5)}\` ${s.price >= s.ma5 ? ":large_green_circle:" : ":red_circle:"}  ` +
-        `MA10 \`${fm(s.ma10)}\` ${s.price >= s.ma10 ? ":large_green_circle:" : ":red_circle:"}  ` +
-        `MA20 \`${fm(s.ma20)}\` ${s.price >= s.ma20 ? ":large_green_circle:" : ":red_circle:"}  ` +
-        `MA50 \`${fm(s.ma50)}\` ${s.price >= s.ma50 ? ":large_green_circle:" : ":red_circle:"}  ` +
-        `MA200 \`${fm(s.ma200)}\` ${s.price >= s.ma200 ? ":large_green_circle:" : ":red_circle:"}`;
+        `${ma("MA5", s.ma5)}  ${ma("MA10", s.ma10)}  ${ma("MA20", s.ma20)}  ${ma("MA50", s.ma50)}  ${ma("MA200", s.ma200)}`;
       const metaLine = [s.sector, s.industry].filter(Boolean).map((v) => `\`${v}\``).join(" › ");
       const titleLine = s.companyName
         ? `• *<${s.chartUrl}|${s.symbol}>*  _${s.companyName}_${metaLine ? `  ${metaLine}` : ""}  Price \`${fp}\``
